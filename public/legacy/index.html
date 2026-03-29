@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="color-scheme" content="dark"/>
+  <title>متجر بيت التحفيات</title>
+
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@18/build/css/intlTelInput.css">
+</head>
+
+<body>
+
+  <header class="topbar" role="banner">
+  <div class="topbarInner">
+
+    <div class="topbarActions">
+      <button id="cartToggle" class="cartBtn" type="button" aria-label="Cart">
+        <span class="cartBtn__icon">🛒</span>
+        <span id="cartCount" class="cartBtn__count">0</span>
+      </button>
+
+      <div class="langWrap">
+        <select id="langSelect" class="selectMini" aria-label="Language">
+          <option value="ar">AR</option>
+          <option value="en">EN</option>
+          <option value="ku">KU</option>
+        </select>
+      </div>
+    </div>
+
+  </div>
+</header>
+
+  <section class="hero heroSticky" aria-label="Cover">
+    <div class="heroSlider" id="heroSlider" aria-label="Cover slider">
+      <div class="heroTrack" id="heroTrack">
+        <div class="heroSlide"><img src="cover1.jpg" alt=""></div>
+        <div class="heroSlide"><img src="cover2.jpg" alt=""></div>
+        <div class="heroSlide"><img src="cover3.jpg" alt=""></div>
+        <div class="heroSlide"><img src="cover4.jpg" alt=""></div>
+        <div class="heroSlide"><img src="cover5.jpg" alt=""></div>
+        <div class="heroSlide"><img src="cover6.jpg" alt=""></div>
+        <div class="heroSlide"><img src="cover7.jpg" alt=""></div>
+        <div class="heroSlide"><img src="cover8.jpg" alt=""></div>
+      </div>
+
+      <div class="heroOverlay">
+        <div class="heroCaption">
+          <div class="heroLogo">
+            <img src="logo.png" alt="House of Antiques">
+          </div>
+          <div class="heroSub">House of Antiques - بيت التحفيات</div>
+          <h1 class="heroTitle">ANTIQUE STORE</h1>
+        </div>
+
+        <div class="heroDots" id="heroDots" aria-hidden="true"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="filters">
+    <div class="searchRow">
+      <input
+        id="searchInput"
+        class="search"
+        type="search"
+        inputmode="search"
+        autocomplete="off"
+        data-i18n-placeholder="search_placeholder"
+        placeholder="ابحث بالكود أو الاسم..."
+      />
+      <div id="resultsCount" class="count">0 نتائج</div>
+    </div>
+
+    <div id="featuredWrap" class="featuredWrap"></div>
+    <div id="chipsWrap" class="chips" aria-label="Categories"></div>
+
+    <div class="selectsRow">
+      <select id="sortSelect" class="select" aria-label="Sort">
+        <option value="featured" data-i18n="sort_featured">Featured</option>
+        <option value="newest" data-i18n="sort_newest">Newest</option>
+        <option value="priceAsc" data-i18n="sort_price_asc">Price ↑</option>
+        <option value="priceDesc" data-i18n="sort_price_desc">Price ↓</option>
+      </select>
+
+      <select id="showSelect" class="select" aria-label="Show">
+        <option value="all" data-i18n="show_all">الكل</option>
+        <option value="fav" data-i18n="show_favorites">المفضلة</option>
+      </select>
+    </div>
+  </section>
+
+  <main class="page">
+    <div id="productsGrid" class="grid" aria-live="polite"></div>
+    <div id="emptyState" class="empty" style="display:none;">لا توجد نتائج</div>
+  </main>
+
+  <div class="modal" id="modal" aria-hidden="true">
+    <div class="modalDialog" role="dialog" aria-modal="true" aria-label="Product details">
+      <button class="modalClose" id="modalClose" type="button" data-i18n="close">إغلاق</button>
+
+      <div id="modalBody" class="modalBody">
+        <div class="pinMedia" id="pinMedia">
+          <img id="modalMainImg" src="" alt="" />
+        </div>
+
+      <div class="pinBar">
+  <div class="pinPrice" id="pinPrice">—</div>
+
+  <div class="pinActions">
+    <div class="pinIcons">
+      <button class="pinIcon" type="button" id="favBtn" aria-label="fav">♡</button>
+      <button class="pinIcon" type="button" id="shareWaBtn" aria-label="share">⤴</button>
+      <button class="pinIcon" type="button" id="copyLinkBtn" aria-label="link">⋯</button>
+    </div>
+  </div>
+</div>
+
+        <div class="pinMeta">
+          <div class="pinTitleRow">
+            <h3 class="pinTitle" id="modalTitle">—</h3>
+            <span class="badge auction" id="modalBadge" style="display:none;" data-i18n="badge_auction">مزاد</span>
+          </div>
+
+          <div class="pinMini">
+            <span data-i18n="code_label">Code</span>: <span id="modalCode">—</span>
+            <span class="dot">•</span>
+            <span id="modalStatus">—</span>
+          </div>
+        </div>
+
+   <div class="pinToggles">
+  <button class="toggle active" type="button" id="pinDetailsToggle" data-i18n="tab_details">تفاصيل</button>
+  <button class="toggle" type="button" id="addToCartBtn">أضف إلى السلة</button>
+</div>
+
+        <div class="pinDetails" id="pinDetails">
+          <div class="pinDims" id="pinDimsWrap" style="display:none;">
+            <strong>Dimensions:</strong>
+            <span id="itemDimensions"></span>
+          </div>
+
+          <div class="pinDesc is-collapsed" id="pinDesc">—</div>
+          <button class="pinMore" type="button" id="pinMoreBtn" style="display:none;">اضغط للمزيد</button>
+        </div>
+
+        <section class="pinOrder" id="pinOrderPanel" style="display:none;">
+          <div class="formTitle" data-i18n="customer_data">بيانات الزبون</div>
+
+          <div class="formGrid">
+            <div class="field">
+              <label id="lb_name" data-i18n="full_name">الاسم الكامل</label>
+              <input id="orderName" type="text" data-i18n-placeholder="ph_full_name" placeholder="مثال: طارق محمد علي" />
+            </div>
+
+            <div class="field">
+              <label id="lb_phone" data-i18n="phone">رقم الهاتف</label>
+              <input id="orderPhone" type="tel" data-i18n-placeholder="ph_phone" placeholder="07xxxxxxxxx" />
+            </div>
+
+            <div class="field">
+              <label id="lb_email">البريد الإلكتروني</label>
+              <input id="orderEmail" type="email" placeholder="example@email.com" />
+            </div>
+
+            <div class="field">
+              <label id="lb_gov" data-i18n="governorate">المحافظة</label>
+              <input id="orderGov" type="text" data-i18n-placeholder="ph_governorate" placeholder="مثال: بغداد" />
+            </div>
+
+            <div class="field">
+              <label id="lb_area" data-i18n="area">المنطقة</label>
+              <input id="orderArea" type="text" data-i18n-placeholder="ph_area" placeholder="مثال: أبو نؤاس" />
+            </div>
+
+            <div class="field full">
+              <label id="lb_landmark" data-i18n="nearest_landmark">أقرب نقطة دالة</label>
+              <input id="orderLandmark" type="text" data-i18n-placeholder="ph_landmark" placeholder="قرب مجمع كورنيش أبو نؤاس" />
+            </div>
+
+            <div class="field full">
+              <label id="lb_notes" data-i18n="notes_optional">ملاحظات (اختياري)</label>
+              <textarea id="orderNotes" rows="3" data-i18n-placeholder="ph_notes" placeholder="مثال: أريد معاينة القطعة..."></textarea>
+            </div>
+          </div>
+
+          <div class="formActions">
+            <button class="btn primary" type="button" id="orderWhatsApp" data-i18n="order_whatsapp">ارسال الطلب</button>
+            <button class="btn" type="button" id="copyOrder" data-i18n="copy_order_details">نسخ تفاصيل الطلب</button>
+          </div>
+        </section>
+
+        <div class="similarWrap" id="similarProducts"></div>
+      </div>
+    </div>
+  </div>
+<!-- CART DRAWER -->
+<aside id="cartDrawer" class="cartDrawer" aria-hidden="true">
+  <div id="cartBackdrop" class="cartDrawer__backdrop"></div>
+
+  <div class="cartDrawer__panel" role="dialog" aria-modal="true" aria-label="Shopping cart">
+    <div class="cartDrawer__head">
+     <h3 class="cartDrawer__title" id="cartTitle" data-i18n="cart_title">السلة</h3>
+<button id="cartClose" class="cartDrawer__close" type="button">×</button>
+</div>
+
+<div id="cartItems" class="cartDrawer__items">
+  <div class="cartDrawer__empty" id="cartEmptyText" data-i18n="cart_empty">السلة فارغة</div>
+</div>
+
+<div class="cartDrawer__foot">
+  <div class="cartDrawer__totalRow">
+    <span id="cartTotalLabel" data-i18n="cart_total">المجموع</span>
+    <strong id="cartTotal">$0</strong>
+  </div>
+
+  <div class="cartDrawer__actions">
+    <button id="cartCheckoutBtn" class="btn primary" type="button" data-i18n="cart_checkout">
+      إتمام الطلب
+    </button>
+    <button id="cartClearBtn" class="btn" type="button" data-i18n="cart_clear">
+      تفريغ السلة
+    </button>
+  </div>
+      </div>
+    </div>
+  </div>
+</aside>
+  <footer class="legalFooter" aria-label="Legal footer">
+    <div class="legalFooter__inner">
+      <span class="legalFooter__copy">© House of Antiques</span>
+
+      <nav class="legalFooter__links" aria-label="Policies">
+        <a href="./terms.html">الشروط والأحكام</a>
+        <span class="dot">•</span>
+        <a href="./privacy.html">سياسة الخصوصية</a>
+        <span class="dot">•</span>
+        <a href="./returns.html">الاستبدال والاسترجاع</a>
+        <span class="dot">•</span>
+        <a href="./shipping.html">الشحن</a>
+      </nav>
+    </div>
+  </footer>
+<script src="./i18n.js" defer></script>
+
+<script
+  src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"
+  defer
+></script>
+
+<script
+  src="https://cdn.jsdelivr.net/npm/intl-tel-input@18/build/js/intlTelInput.min.js"
+  defer
+></script>
+
+<script
+  src="https://cdn.jsdelivr.net/npm/intl-tel-input@18/build/js/utils.js"
+  defer
+></script>
+
+<script type="module">
+  import { ARTWORKS_PRODUCTS } from "./artworks.js";
+  import { PAINTINGS_PRODUCTS } from "./paintings.js";
+  import { WOOD_PRODUCTS } from "./wood.js";
+  import { COPPER_PRODUCTS } from "./copper.js";
+  import { SILVER_PRODUCTS } from "./silver.js";
+  import { CRYSTAL_PRODUCTS } from "./crystal.js";
+  import { FURNITURE_PRODUCTS } from "./furniture.js";
+  import { ARABIC_CALLIGRAPHY_PRODUCTS } from "./ARABIC_CALLIGRAPHY.js";
+  import { ACCESSORIES_PRODUCTS } from "./Accessories.js";
+  import { CARPETS_PRODUCTS } from "./carpets.js";
+  import { VASES_PRODUCTS } from "./vases.js";
+
+  const fallbackProducts = [
+    ...ARTWORKS_PRODUCTS,
+    ...PAINTINGS_PRODUCTS,
+    ...WOOD_PRODUCTS,
+    ...COPPER_PRODUCTS,
+    ...SILVER_PRODUCTS,
+    ...CRYSTAL_PRODUCTS,
+    ...FURNITURE_PRODUCTS,
+    ...ARABIC_CALLIGRAPHY_PRODUCTS,
+    ...ACCESSORIES_PRODUCTS,
+    ...CARPETS_PRODUCTS,
+    ...VASES_PRODUCTS,
+  ];
+
+  try {
+    const res = await fetch("/api/products");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const products = await res.json();
+
+    window.PRODUCTS =
+      Array.isArray(products) && products.length
+        ? products
+        : fallbackProducts;
+
+    console.log("Using products:", window.PRODUCTS.length);
+  } catch (err) {
+    window.PRODUCTS = fallbackProducts;
+    console.error("Fallback used:", err);
+  }
+
+  const script = document.createElement("script");
+  script.src = "./script.js";
+  document.body.appendChild(script);
+</script>

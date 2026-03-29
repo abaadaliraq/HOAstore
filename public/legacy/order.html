@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>إتمام الطلب</title>
+<style>
+body {
+  background:#0f0f10;
+  color:#fff;
+  font-family:Arial;
+  padding:20px;
+}
+
+.container {
+  max-width:900px;
+  margin:auto;
+}
+
+.card {
+  background:#1a1b1f;
+  padding:20px;
+  border-radius:16px;
+  margin-bottom:20px;
+}
+
+input, select {
+  width:100%;
+  padding:12px;
+  margin:8px 0;
+  border-radius:10px;
+  border:none;
+}
+
+button {
+  width:100%;
+  padding:14px;
+  background:#c6a56b;
+  border:none;
+  border-radius:12px;
+  cursor:pointer;
+  font-weight:bold;
+}
+
+.item {
+  display:flex;
+  gap:10px;
+  margin-bottom:10px;
+}
+
+.item img {
+  width:60px;
+  height:60px;
+  object-fit:cover;
+  border-radius:8px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>إتمام الطلب</h2>
+
+<div class="card">
+  <h3>ملخص الطلب</h3>
+  <div id="items"></div>
+  <h3 id="total">$0</h3>
+</div>
+
+<div class="card">
+  <h3>معلومات العميل</h3>
+
+  <input id="name" placeholder="الاسم الكامل">
+  <input id="phone" placeholder="رقم الهاتف">
+  <input id="email" placeholder="البريد الإلكتروني (اختياري)">
+
+  <select id="paymentType">
+    <option value="transfer">تحويل إلى ماستر كارد</option>
+    <option value="cod">الدفع عند التوصيل</option>
+  </select>
+
+  <button id="submitBtn">إرسال الطلب</button>
+</div>
+
+</div>
+
+<script>
+const CART_KEY = "hoa_cart_v1";
+
+function getCart() {
+  try {
+    return JSON.parse(localStorage.getItem(CART_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function findProduct(id) {
+  return (window.PRODUCTS || []).find(p =>
+    String(p.product_code || p.id) === String(id)
+  );
+}
+
+function getPrice(p) {
+  return Number(p.price || p.priceNumber || 0);
+}
+
+function render() {
+  const itemsEl = document.getElementById("items");
+  const totalEl = document.getElementById("total");
+
+  const cart = getCart();
+
+  let total = 0;
+
+  itemsEl.innerHTML = cart.map(i => {
+    const p = findProduct(i.id) || {};
+    const price = getPrice(p);
+    total += price;
+
+    const img =
+      p.image ||
+      (Array.isArray(p.images) ? p.images[0] : "") ||
+      "https://placehold.co/100";
+
+    return `
+      <div class="item">
+        <img src="${img}">
+        <div>
+          <div>${p.name_ar || p.name_en || "منتج"}</div>
+          <div>$${price}</div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  totalEl.textContent = "$" + total;
+}
+
+render();
+
+document.getElementById("submitBtn").onclick = async () => {
+
+  const name = document.getElementById("name").value.trim();
+  const phone = document.getElementById("phone").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const paymentType = document.getElementById("paymentType").value;
+
+  if (!name || !phone) {
+    alert("املئي الاسم ورقم الهاتف");
+    return;
+  }
+
+  const cart = getCart();
+
+  const payload = {
+    name,
+    phone,
+    email,
+    payment_type: paymentType,
+    items: cart
+  };
+
+  try {
+    const res = await fetch("/api/order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error);
+
+    alert("تم إرسال الطلب ✅");
+
+    localStorage.removeItem(CART_KEY);
+
+    window.location.href = "/";
+
+  } catch (err) {
+    alert("خطأ: " + err.message);
+  }
+};
+</script>
+
+</body>
+</html>
