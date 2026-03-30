@@ -470,44 +470,48 @@
     }
 
     async function fetchProductsByTokens(tokens) {
-      const uniqueTokens = [...new Set(tokens.map(t => safeText(t).trim()).filter(Boolean))];
-      if (!uniqueTokens.length) return [];
+  const uniqueTokens = [...new Set(tokens.map(t => safeText(t).trim()).filter(Boolean))];
+  if (!uniqueTokens.length) return [];
 
-      const uuidTokens = uniqueTokens.filter(isUuid);
-      const codeTokens = uniqueTokens.filter((t) => !isUuid(t));
+  let byCode = [];
+  let byId = [];
 
-      let byCode = [];
-      let byId = [];
+  // search by product_code
+  {
+    const { data, error } = await supabase
+      .from("products")
+      .select("id, product_code, price, priceNumber, image, images, name, name_ar, name_en, name_ku, status")
+      .in("product_code", uniqueTokens);
 
-      if (codeTokens.length) {
-        const { data, error } = await supabase
-          .from("products")
-          .select("id, product_code, price, priceNumber, image, images, name, name_ar, name_en, name_ku, status")
-          .in("product_code", codeTokens);
-
-        if (error) throw error;
-        byCode = data || [];
-      }
-
-      if (uuidTokens.length) {
-        const { data, error } = await supabase
-          .from("products")
-          .select("id, product_code, price, priceNumber, image, images, name, name_ar, name_en, name_ku, status")
-          .in("id", uuidTokens);
-
-        if (error) throw error;
-        byId = data || [];
-      }
-
-      const merged = new Map();
-
-      for (const p of [...byCode, ...byId]) {
-        merged.set(String(p.id), p);
-      }
-
-      return [...merged.values()];
+    if (error) {
+      console.error("Query by product_code failed:", error);
+    } else {
+      byCode = data || [];
     }
+  }
 
+  // search by id
+  {
+    const { data, error } = await supabase
+      .from("products")
+      .select("id, product_code, price, priceNumber, image, images, name, name_ar, name_en, name_ku, status")
+      .in("id", uniqueTokens);
+
+    if (error) {
+      console.error("Query by id failed:", error);
+    } else {
+      byId = data || [];
+    }
+  }
+
+  const merged = new Map();
+
+  for (const p of [...byCode, ...byId]) {
+    merged.set(String(p.id), p);
+  }
+
+  return [...merged.values()];
+}
     function productName(p) {
       return safeText(p?.name_ar || p?.name_en || p?.name_ku || p?.name || "منتج");
     }

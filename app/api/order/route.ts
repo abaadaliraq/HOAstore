@@ -67,44 +67,43 @@ export async function POST(req: Request) {
   }
 
   const uniqueItems = [...new Set(rawItems)];
-  const uuidItems = uniqueItems.filter(isUuid);
-  const codeItems = uniqueItems.filter((x) => !isUuid(x));
 
-  let byCode: ProductRow[] = [];
-  let byId: ProductRow[] = [];
+let byCode: ProductRow[] = [];
+let byId: ProductRow[] = [];
 
-  if (codeItems.length) {
-    const { data, error } = await db
-      .from("products")
-      .select("id, product_code, price, status")
-      .in("product_code", codeItems);
+// search by product_code
+{
+  const { data, error } = await db
+    .from("products")
+    .select("id, product_code, price, status")
+    .in("product_code", uniqueItems);
 
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
-    }
-
-    byCode = (data ?? []) as ProductRow[];
+  if (error) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
   }
 
-  if (uuidItems.length) {
-    const { data, error } = await db
-      .from("products")
-      .select("id, product_code, price, status")
-      .in("id", uuidItems);
+  byCode = (data ?? []) as ProductRow[];
+}
 
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
-    }
+// search by id
+{
+  const { data, error } = await db
+    .from("products")
+    .select("id, product_code, price, status")
+    .in("id", uniqueItems);
 
-    byId = (data ?? []) as ProductRow[];
+  if (error) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
   }
 
+  byId = (data ?? []) as ProductRow[];
+}
   const merged = new Map<string, ProductRow>();
 
   for (const p of byCode) merged.set(String(p.id), p);
