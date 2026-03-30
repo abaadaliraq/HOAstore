@@ -1,189 +1,707 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<title>إتمام الطلب</title>
-<style>
-body {
-  background:#0f0f10;
-  color:#fff;
-  font-family:Arial;
-  padding:20px;
-}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>إتمام الطلب | بيت التحفيات</title>
+  <link rel="stylesheet" href="./styles.css" />
 
-.container {
-  max-width:900px;
-  margin:auto;
-}
+  <style>
+    body.orderPage{
+      min-height:100vh;
+      margin:0;
+      background:
+        radial-gradient(1000px 600px at 50% -10%, rgba(255,255,255,.05), transparent 60%),
+        linear-gradient(180deg, #08090c, #000);
+      color:#fff;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
 
-.card {
-  background:#1a1b1f;
-  padding:20px;
-  border-radius:16px;
-  margin-bottom:20px;
-}
+    .orderWrap{
+      max-width:1180px;
+      margin:0 auto;
+      padding:28px 16px 56px;
+    }
 
-input, select {
-  width:100%;
-  padding:12px;
-  margin:8px 0;
-  border-radius:10px;
-  border:none;
-}
+    .orderTop{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:18px;
+    }
 
-button {
-  width:100%;
-  padding:14px;
-  background:#c6a56b;
-  border:none;
-  border-radius:12px;
-  cursor:pointer;
-  font-weight:bold;
-}
+    .orderBack{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      text-decoration:none;
+      color:#fff;
+      padding:10px 14px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.05);
+    }
 
-.item {
-  display:flex;
-  gap:10px;
-  margin-bottom:10px;
-}
+    .orderBack:hover{
+      background:rgba(255,255,255,.08);
+    }
 
-.item img {
-  width:60px;
-  height:60px;
-  object-fit:cover;
-  border-radius:8px;
-}
-</style>
+    .orderTitle{
+      margin:0;
+      font-size:30px;
+      font-weight:900;
+      letter-spacing:.2px;
+    }
+
+    .orderSub{
+      margin:6px 0 0;
+      color:rgba(255,255,255,.65);
+      font-size:13px;
+    }
+
+    .orderGrid{
+      display:grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(320px, .9fr);
+      gap:18px;
+      align-items:start;
+    }
+
+    .orderCard{
+      border-radius:24px;
+      border:1px solid rgba(255,255,255,.08);
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.025));
+      box-shadow:0 20px 55px rgba(0,0,0,.28);
+      overflow:hidden;
+    }
+
+    .orderCard__head{
+      padding:18px 18px 14px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+
+    .orderCard__title{
+      margin:0;
+      font-size:20px;
+      font-weight:800;
+    }
+
+    .orderCard__body{
+      padding:18px;
+    }
+
+    .orderItems{
+      display:grid;
+      gap:12px;
+    }
+
+    .orderItem{
+      display:grid;
+      grid-template-columns:90px 1fr auto;
+      gap:14px;
+      align-items:center;
+      padding:12px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.025);
+    }
+
+    .orderItem__media{
+      width:90px;
+      height:90px;
+      border-radius:16px;
+      overflow:hidden;
+      background:rgba(255,255,255,.04);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .orderItem__media img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+
+    .orderItem__title{
+      font-size:15px;
+      font-weight:800;
+      line-height:1.6;
+      margin-bottom:6px;
+    }
+
+    .orderItem__meta{
+      font-size:12px;
+      color:rgba(255,255,255,.62);
+      line-height:1.7;
+    }
+
+    .orderItem__price{
+      text-align:left;
+      direction:ltr;
+      min-width:92px;
+      font-weight:900;
+      font-size:18px;
+      white-space:nowrap;
+    }
+
+    .orderEmpty{
+      min-height:220px;
+      display:grid;
+      place-items:center;
+      text-align:center;
+      color:rgba(255,255,255,.68);
+      border:1px dashed rgba(255,255,255,.10);
+      border-radius:20px;
+      background:rgba(255,255,255,.02);
+      padding:20px;
+    }
+
+    .summaryBox{
+      display:grid;
+      gap:16px;
+    }
+
+    .summaryRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      font-size:15px;
+      color:rgba(255,255,255,.8);
+    }
+
+    .summaryRow strong{
+      color:#fff;
+      font-size:15px;
+    }
+
+    .summaryTotal{
+      padding-top:14px;
+      border-top:1px solid rgba(255,255,255,.08);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      font-size:16px;
+    }
+
+    .summaryTotal strong{
+      font-size:28px;
+      font-weight:900;
+      direction:ltr;
+      white-space:nowrap;
+    }
+
+    .formGrid{
+      display:grid;
+      gap:12px;
+    }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+
+    .field label{
+      font-size:13px;
+      color:rgba(255,255,255,.72);
+      font-weight:700;
+    }
+
+    .field input,
+    .field select,
+    .field textarea{
+      width:100%;
+      min-height:50px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.06);
+      color:#fff;
+      padding:0 14px;
+      outline:none;
+      box-sizing:border-box;
+      font-size:14px;
+    }
+
+    .field textarea{
+      min-height:110px;
+      padding:14px;
+      resize:vertical;
+    }
+
+    .field input::placeholder,
+    .field textarea::placeholder{
+      color:rgba(255,255,255,.45);
+    }
+
+    .submitBtn{
+      width:100%;
+      min-height:54px;
+      border:none;
+      border-radius:18px;
+      background:linear-gradient(135deg, #b89b5e, #7c6536);
+      color:#0b0b0b;
+      font-size:15px;
+      font-weight:900;
+      cursor:pointer;
+      transition:transform .15s ease, opacity .15s ease, box-shadow .15s ease;
+      box-shadow:0 12px 28px rgba(184,155,94,.18);
+    }
+
+    .submitBtn:hover{
+      transform:translateY(-1px);
+    }
+
+    .submitBtn:active{
+      transform:scale(.98);
+    }
+
+    .submitBtn[disabled]{
+      opacity:.6;
+      cursor:not-allowed;
+      transform:none;
+    }
+
+    .noteBox{
+      margin-top:12px;
+      padding:14px;
+      border-radius:16px;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.08);
+      color:rgba(255,255,255,.72);
+      font-size:13px;
+      line-height:1.8;
+    }
+
+    .statusLine{
+      margin-top:10px;
+      font-size:13px;
+      color:rgba(255,255,255,.75);
+      min-height:20px;
+    }
+
+    @media (max-width: 960px){
+      .orderGrid{
+        grid-template-columns:1fr;
+      }
+    }
+
+    @media (max-width: 640px){
+      .orderTitle{
+        font-size:24px;
+      }
+
+      .orderItem{
+        grid-template-columns:72px 1fr;
+      }
+
+      .orderItem__media{
+        width:72px;
+        height:72px;
+      }
+
+      .orderItem__price{
+        grid-column:2;
+        text-align:right;
+      }
+
+      .orderTop{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+    }
+  </style>
 </head>
 
-<body>
-
-<div class="container">
-
-<h2>إتمام الطلب</h2>
-
-<div class="card">
-  <h3>ملخص الطلب</h3>
-  <div id="items"></div>
-  <h3 id="total">$0</h3>
-</div>
-
-<div class="card">
-  <h3>معلومات العميل</h3>
-
-  <input id="name" placeholder="الاسم الكامل">
-  <input id="phone" placeholder="رقم الهاتف">
-  <input id="email" placeholder="البريد الإلكتروني (اختياري)">
-
-  <select id="paymentType">
-    <option value="transfer">تحويل إلى ماستر كارد</option>
-    <option value="cod">الدفع عند التوصيل</option>
-  </select>
-
-  <button id="submitBtn">إرسال الطلب</button>
-</div>
-
-</div>
-
-<script>
-const CART_KEY = "hoa_cart_v1";
-
-function getCart() {
-  try {
-    return JSON.parse(localStorage.getItem(CART_KEY)) || [];
-  } catch {
-    return [];
-  }
-}
-
-function findProduct(id) {
-  return (window.PRODUCTS || []).find(p =>
-    String(p.product_code || p.id) === String(id)
-  );
-}
-
-function getPrice(p) {
-  return Number(p.price || p.priceNumber || 0);
-}
-
-function render() {
-  const itemsEl = document.getElementById("items");
-  const totalEl = document.getElementById("total");
-
-  const cart = getCart();
-
-  let total = 0;
-
-  itemsEl.innerHTML = cart.map(i => {
-    const p = findProduct(i.id) || {};
-    const price = getPrice(p);
-    total += price;
-
-    const img =
-      p.image ||
-      (Array.isArray(p.images) ? p.images[0] : "") ||
-      "https://placehold.co/100";
-
-    return `
-      <div class="item">
-        <img src="${img}">
-        <div>
-          <div>${p.name_ar || p.name_en || "منتج"}</div>
-          <div>$${price}</div>
-        </div>
+<body class="orderPage">
+  <div class="orderWrap">
+    <div class="orderTop">
+      <div>
+        <h1 class="orderTitle">إتمام الطلب</h1>
+        <p class="orderSub">راجعي القطع المختارة ثم أكملي بيانات الطلب.</p>
       </div>
-    `;
-  }).join("");
 
-  totalEl.textContent = "$" + total;
-}
+      <a class="orderBack" href="./index.html">← العودة إلى المتجر</a>
+    </div>
 
-render();
+    <div class="orderGrid">
+      <section class="orderCard">
+        <div class="orderCard__head">
+          <h2 class="orderCard__title">ملخص الطلب</h2>
+          <span id="itemsCount">0 قطعة</span>
+        </div>
 
-document.getElementById("submitBtn").onclick = async () => {
+        <div class="orderCard__body">
+          <div id="items" class="orderItems"></div>
+        </div>
+      </section>
 
-  const name = document.getElementById("name").value.trim();
-  const phone = document.getElementById("phone").value.trim();
-  const email = document.getElementById("email").value.trim();
-  const paymentType = document.getElementById("paymentType").value;
+      <aside class="orderCard">
+        <div class="orderCard__head">
+          <h2 class="orderCard__title">معلومات العميل</h2>
+        </div>
 
-  if (!name || !phone) {
-    alert("املئي الاسم ورقم الهاتف");
-    return;
-  }
+        <div class="orderCard__body">
+          <div class="summaryBox">
+            <div class="summaryRow">
+              <span>عدد القطع</span>
+              <strong id="summaryCount">0</strong>
+            </div>
 
-  const cart = getCart();
+            <div class="summaryTotal">
+              <span>المجموع</span>
+              <strong id="total">$0</strong>
+            </div>
+          </div>
 
-  const payload = {
-    name,
-    phone,
-    email,
-    payment_type: paymentType,
-    items: cart
-  };
+          <div class="formGrid" style="margin-top:18px;">
+            <div class="field">
+              <label for="name">الاسم الكامل</label>
+              <input id="name" type="text" placeholder="مثال: طارق محمد علي" />
+            </div>
 
-  try {
-    const res = await fetch("/api/order", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
+            <div class="field">
+              <label for="phone">رقم الهاتف</label>
+              <input id="phone" type="tel" placeholder="07xxxxxxxxx" />
+            </div>
 
-    const data = await res.json();
+            <div class="field">
+              <label for="email">البريد الإلكتروني (اختياري)</label>
+              <input id="email" type="email" placeholder="example@email.com" />
+            </div>
 
-    if (!res.ok) throw new Error(data.error);
+            <div class="field">
+              <label for="paymentType">طريقة الدفع</label>
+              <select id="paymentType">
+                <option value="cod">الدفع عند التوصيل</option>
+                <option value="transfer">تحويل إلى ماستر كارد</option>
+              </select>
+            </div>
 
-    alert("تم إرسال الطلب ✅");
+            <div class="field">
+              <label for="notes">ملاحظات (اختياري)</label>
+              <textarea id="notes" placeholder="أي تفاصيل إضافية بخصوص الطلب أو التوصيل"></textarea>
+            </div>
+          </div>
 
-    localStorage.removeItem(CART_KEY);
+          <div class="noteBox">
+            بعد إرسال الطلب، سيتم تسجيله في النظام مباشرة. إذا اخترتِ التحويل، راح ترجع لكِ معلومات التحويل بعد نجاح الطلب.
+          </div>
 
-    window.location.href = "/";
+          <div class="statusLine" id="statusLine"></div>
 
-  } catch (err) {
-    alert("خطأ: " + err.message);
-  }
-};
-</script>
+          <button id="submitBtn" class="submitBtn" type="button">إرسال الطلب</button>
+        </div>
+      </aside>
+    </div>
+  </div>
 
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+    const CART_KEY = "hoa_cart_v1";
+
+    const SUPABASE_URL = "https://ynfzwssbhkcwlgzistzj.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_ML_2mRd6ntOYpj5azn5C7w_41PvlQ6L";
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const els = {
+      items: document.getElementById("items"),
+      total: document.getElementById("total"),
+      summaryCount: document.getElementById("summaryCount"),
+      itemsCount: document.getElementById("itemsCount"),
+      submitBtn: document.getElementById("submitBtn"),
+      statusLine: document.getElementById("statusLine"),
+      name: document.getElementById("name"),
+      phone: document.getElementById("phone"),
+      email: document.getElementById("email"),
+      paymentType: document.getElementById("paymentType"),
+      notes: document.getElementById("notes"),
+    };
+
+    function safeText(x) {
+      return x == null ? "" : String(x);
+    }
+
+    function isUuid(value) {
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || "").trim());
+    }
+
+    function getCartRaw() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(CART_KEY)) || [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function normalizeCart(cart) {
+      const lines = [];
+
+      for (const item of cart) {
+        const token = safeText(
+          item?.id ||
+          item?.product_code ||
+          item?.code ||
+          item?._code ||
+          item?._key
+        ).trim();
+
+        const qty = Math.max(1, Number(item?.qty || 1));
+
+        if (!token) continue;
+
+        lines.push({
+          token,
+          qty,
+        });
+      }
+
+      return lines;
+    }
+
+    async function fetchProductsByTokens(tokens) {
+      const uniqueTokens = [...new Set(tokens.map(t => safeText(t).trim()).filter(Boolean))];
+      if (!uniqueTokens.length) return [];
+
+      const uuidTokens = uniqueTokens.filter(isUuid);
+      const codeTokens = uniqueTokens.filter((t) => !isUuid(t));
+
+      let byCode = [];
+      let byId = [];
+
+      if (codeTokens.length) {
+        const { data, error } = await supabase
+          .from("products")
+          .select("id, product_code, price, priceNumber, image, images, name, name_ar, name_en, name_ku, status")
+          .in("product_code", codeTokens);
+
+        if (error) throw error;
+        byCode = data || [];
+      }
+
+      if (uuidTokens.length) {
+        const { data, error } = await supabase
+          .from("products")
+          .select("id, product_code, price, priceNumber, image, images, name, name_ar, name_en, name_ku, status")
+          .in("id", uuidTokens);
+
+        if (error) throw error;
+        byId = data || [];
+      }
+
+      const merged = new Map();
+
+      for (const p of [...byCode, ...byId]) {
+        merged.set(String(p.id), p);
+      }
+
+      return [...merged.values()];
+    }
+
+    function productName(p) {
+      return safeText(p?.name_ar || p?.name_en || p?.name_ku || p?.name || "منتج");
+    }
+
+    function productImage(p) {
+      return safeText(
+        p?.image ||
+        (Array.isArray(p?.images) ? p.images[0] : "") ||
+        "https://placehold.co/300x300?text=HOA"
+      );
+    }
+
+    function productPrice(p) {
+      const n = Number(p?.priceNumber ?? p?.price ?? 0);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    let state = {
+      lines: [],
+      products: [],
+      renderedLines: [],
+      total: 0,
+    };
+
+    function renderEmpty(message = "السلة فارغة") {
+      els.items.innerHTML = `<div class="orderEmpty">${message}</div>`;
+      els.total.textContent = "$0";
+      els.summaryCount.textContent = "0";
+      els.itemsCount.textContent = "0 قطعة";
+      state.total = 0;
+      state.renderedLines = [];
+    }
+
+    function renderOrder() {
+      const lookup = new Map();
+
+      for (const p of state.products) {
+        lookup.set(String(p.product_code || "").trim(), p);
+        lookup.set(String(p.id || "").trim(), p);
+      }
+
+      let total = 0;
+      const renderedLines = [];
+
+      for (const line of state.lines) {
+        const p = lookup.get(line.token);
+
+        if (!p) continue;
+
+        const unitPrice = productPrice(p);
+        const lineTotal = unitPrice * line.qty;
+        total += lineTotal;
+
+        renderedLines.push({
+          token: line.token,
+          qty: line.qty,
+          product: p,
+          unitPrice,
+          lineTotal,
+        });
+      }
+
+      state.renderedLines = renderedLines;
+      state.total = total;
+
+      if (!renderedLines.length) {
+        renderEmpty("لم يتم العثور على بيانات القطع داخل قاعدة البيانات.");
+        return;
+      }
+
+      els.items.innerHTML = renderedLines.map(({ product, qty, unitPrice, lineTotal }) => `
+        <div class="orderItem">
+          <div class="orderItem__media">
+            <img src="${productImage(product)}" alt="${productName(product)}" loading="lazy" />
+          </div>
+
+          <div>
+            <div class="orderItem__title">${productName(product)}</div>
+            <div class="orderItem__meta">
+              <div>${safeText(product.product_code || product.id || "—")}</div>
+              <div>الكمية: ${qty}</div>
+              <div>سعر القطعة: $${unitPrice.toLocaleString("en-US")}</div>
+            </div>
+          </div>
+
+          <div class="orderItem__price">$${lineTotal.toLocaleString("en-US")}</div>
+        </div>
+      `).join("");
+
+      const count = renderedLines.reduce((sum, x) => sum + x.qty, 0);
+
+      els.total.textContent = `$${total.toLocaleString("en-US")}`;
+      els.summaryCount.textContent = String(count);
+      els.itemsCount.textContent = `${count} قطعة`;
+    }
+
+    function setStatus(message = "", isError = false) {
+      els.statusLine.textContent = message;
+      els.statusLine.style.color = isError ? "#ff9f9f" : "rgba(255,255,255,.75)";
+    }
+
+    async function initPage() {
+      const cartRaw = getCartRaw();
+      const lines = normalizeCart(cartRaw);
+
+      state.lines = lines;
+
+      if (!lines.length) {
+        renderEmpty("السلة فارغة حالياً.");
+        return;
+      }
+
+      try {
+        setStatus("جاري تحميل بيانات القطع...");
+        state.products = await fetchProductsByTokens(lines.map(x => x.token));
+        renderOrder();
+        setStatus("");
+      } catch (err) {
+        console.error(err);
+        renderEmpty("تعذر تحميل بيانات القطع.");
+        setStatus("فشل تحميل بيانات الطلب.", true);
+      }
+    }
+
+    async function submitOrder() {
+      const name = safeText(els.name.value).trim();
+      const phone = safeText(els.phone.value).trim();
+      const email = safeText(els.email.value).trim();
+      const paymentType = safeText(els.paymentType.value).trim();
+      const notes = safeText(els.notes.value).trim();
+
+      if (!name || !phone) {
+        alert("املئي الاسم الكامل ورقم الهاتف");
+        return;
+      }
+
+      if (!state.renderedLines.length) {
+        alert("لا توجد قطع صالحة داخل الطلب");
+        return;
+      }
+
+      const payload = {
+        name,
+        phone,
+        email,
+        payment_type: paymentType,
+        notes,
+        items: state.renderedLines.flatMap((line) =>
+          Array.from({ length: line.qty }, () =>
+            safeText(line.product.product_code || line.product.id).trim()
+          )
+        ),
+      };
+
+      try {
+        els.submitBtn.disabled = true;
+        setStatus("جاري إرسال الطلب...");
+
+        const res = await fetch("/api/order", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data?.error || "فشل إرسال الطلب");
+        }
+
+        localStorage.removeItem(CART_KEY);
+
+        let successMessage = "تم إرسال الطلب بنجاح ✅";
+
+        if (paymentType === "transfer" && data?.paymentInstructions?.cardNumber) {
+          successMessage += `\n\nرقم بطاقة التحويل: ${data.paymentInstructions.cardNumber}`;
+        }
+
+        alert(successMessage);
+        window.location.href = "./index.html";
+      } catch (err) {
+        console.error(err);
+        alert("خطأ: " + (err?.message || "فشل إرسال الطلب"));
+        setStatus("تعذر إرسال الطلب.", true);
+      } finally {
+        els.submitBtn.disabled = false;
+      }
+    }
+
+    els.submitBtn.addEventListener("click", submitOrder);
+
+    initPage();
+  </script>
 </body>
 </html>
