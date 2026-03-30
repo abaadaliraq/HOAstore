@@ -45,16 +45,47 @@ function getRawPrice(product) {
 function pickText(obj, field, getLang) {
   const lang = getLang();
 
+  const pickLocalized = (base) => {
+    const direct =
+      lang === "en"
+        ? obj?.[`${base}_en`]
+        : lang === "ku"
+        ? obj?.[`${base}_ku`]
+        : obj?.[`${base}_ar`];
+
+    if (direct != null && direct !== "") return safeText(direct);
+
+    const raw = obj?.[base];
+
+    if (isObj(raw)) {
+      return safeText(raw?.[lang] || raw?.ar || raw?.en || raw?.ku || "");
+    }
+
+    return safeText(raw || "");
+  };
+
   if (field === "name") {
-    if (lang === "en") return safeText(obj?.name_en || obj?.name || "");
-    if (lang === "ku") return safeText(obj?.name_ku || obj?.name || "");
-    return safeText(obj?.name_ar || obj?.name || "");
+    return pickLocalized("name");
   }
 
   if (field === "desc") {
-    if (lang === "en") return safeText(obj?.description_en || obj?.description || obj?.desc || "");
-    if (lang === "ku") return safeText(obj?.description_ku || obj?.description || obj?.desc || "");
-    return safeText(obj?.description_ar || obj?.description || obj?.desc || "");
+    if (lang === "en" && (obj?.description_en != null && obj?.description_en !== "")) {
+      return safeText(obj.description_en);
+    }
+    if (lang === "ku" && (obj?.description_ku != null && obj?.description_ku !== "")) {
+      return safeText(obj.description_ku);
+    }
+    if (lang === "ar" && (obj?.description_ar != null && obj?.description_ar !== "")) {
+      return safeText(obj.description_ar);
+    }
+
+    const raw = obj?.description ?? obj?.desc ?? "";
+
+    if (isObj(raw)) {
+      return safeText(raw?.[lang] || raw?.ar || raw?.en || raw?.ku || "");
+    }
+
+    return safeText(raw);
   }
 
   if (field === "price") {
@@ -77,7 +108,6 @@ function pickText(obj, field, getLang) {
   if (isObj(v)) return safeText(v[lang] || v.ar || v.en || v.ku || "");
   return safeText(v);
 }
-
   /* =========================
      DOM (IDs unchanged)
   ========================= */
