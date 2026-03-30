@@ -261,6 +261,8 @@
 ></script>
 
 <script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
   import { ARTWORKS_PRODUCTS } from "./artworks.js";
   import { PAINTINGS_PRODUCTS } from "./paintings.js";
   import { WOOD_PRODUCTS } from "./wood.js";
@@ -273,6 +275,7 @@
   import { CARPETS_PRODUCTS } from "./carpets.js";
   import { VASES_PRODUCTS } from "./vases.js";
 
+  // fallback (إذا فشل Supabase)
   const fallbackProducts = [
     ...ARTWORKS_PRODUCTS,
     ...PAINTINGS_PRODUCTS,
@@ -287,24 +290,35 @@
     ...VASES_PRODUCTS,
   ];
 
-  try {
-    const res = await fetch("/api/products");
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const supabase = createClient(
+    "https://ynfzwssbhkcwlgzistzj.supabase.co",
+    "sb_publishable_ML_2mRd6ntOYpj5azn5C7w_41PvlQ6L"
+  );
 
-    const products = await res.json();
+  async function initProducts() {
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*");
 
-    window.PRODUCTS =
-      Array.isArray(products) && products.length
-        ? products
-        : fallbackProducts;
+      if (error) throw error;
 
-    console.log("Using products:", window.PRODUCTS.length);
-  } catch (err) {
-    window.PRODUCTS = fallbackProducts;
-    console.error("Fallback used:", err);
+      window.PRODUCTS =
+        Array.isArray(data) && data.length
+          ? data
+          : fallbackProducts;
+
+      console.log("Using products:", window.PRODUCTS.length);
+    } catch (err) {
+      window.PRODUCTS = fallbackProducts;
+      console.error("Fallback used:", err);
+    }
+
+    // تحميل السكربت الرئيسي بعد البيانات
+    const script = document.createElement("script");
+    script.src = "./script.js";
+    document.body.appendChild(script);
   }
 
-  const script = document.createElement("script");
-  script.src = "./script.js";
-  document.body.appendChild(script);
+  initProducts();
 </script>

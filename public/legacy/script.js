@@ -1,7 +1,6 @@
 
 (() => {
   "use strict";
-
   /* =========================
      CONFIG
   ========================= */
@@ -10,7 +9,7 @@
   const EMAILJS_TEMPLATE_ID = "template_yksn5vh";
 
   const WHATSAPP_NUMBER_INTL = "9647777045544";
-  const STORE_CANONICAL_URL = "https://houseofantiques.github.io/mtjer01/";
+ const STORE_CANONICAL_URL = "https://houseofantiques.store/";
 
   const FAV_KEY = "hoa_favorites_v7";
   const LANG_KEY = "hoa_lang_v7";
