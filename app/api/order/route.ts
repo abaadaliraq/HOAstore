@@ -11,29 +11,157 @@ type Body = {
 };
 
 type ProductRow = {
-  id: string;
-  product_code: string | null;
-  price: number | string | null;
-  status: string | null;
+  id?: string;
+  product_code?: string | null;
+  code?: string | null;
+  price?: number | string | null;
+  priceNumber?: number | string | null;
+  status?: string | null;
+  [key: string]: unknown;
 };
 
-function normalizeToken(v: unknown): string {
+function text(v: unknown): string {
   return String(v ?? "").trim();
 }
 
-function isUuid(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+function toNumber(v: unknown): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
 }
 
-function toNumber(v: unknown): number {
-  if (typeof v === "number") return v;
+function unique<T>(arr: T[]): T[] {
+  return [...new Set(arr)];
+}
 
-  if (typeof v === "string") {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
+async function findProductByToken(db: ReturnType<typeof supabaseAdmin>, token: string): Promise<ProductRow | null> {
+  const clean = text(token);
+  if (!clean) return null;
+
+  // أول محاولة: product_code
+  {
+    const { data, error } = await db
+      .from("products")
+      .select("*")
+      .eq("product_code", clean)
+      .limit(1);
+
+    if (!error && Array.isArray(data) && data.length) {
+      return data[0] as ProductRow;
+    }
   }
 
-  return 0;
+  // ثاني محاولة: id
+  {
+    const { data, error } = await db
+      .from("products")
+      .select("*")
+      .eq("id", clean)
+      .limit(1);
+
+    if (!error && Array.isArray(data) && data.length) {
+      return data[0] as ProductRow;
+    }
+  }
+
+  // ثالث محاولة: code لو موجود
+  {
+    const { data, error } = await db
+      .from("products")
+      .select("*")
+      .eq("code", clean)
+      .limit(1);
+
+    if (!error && Array.isArray(data) && data.length) {
+      return data[0] as ProductRow;
+    }
+  }
+
+  return null;
+}
+
+async function createOrderWithFallbacks(
+  db: ReturnType<typeof supabaseAdmin>,
+  payload: {
+    name: string;
+    email: string;
+    phone: string;
+    notes: string;
+    amountTotal: number;
+    paymentProvider: string;
+  }
+) {
+  const attempts = [
+    {
+      customer_name: payload.name,
+      customer_email: payload.email || null,
+      customer_phone: payload.phone,
+      shipping_address: payload.notes ? { notes: payload.notes } : null,
+      amount_total: payload.amountTotal,
+      currency: "USD",
+      status: "pending_manual_payment",
+      payment_provider: payload.paymentProvider,
+      payment_reference: null,
+      paid_at: null,
+    },
+    {
+      customer_name: payload.name,
+      customer_email: payload.email || null,
+      customer_phone: payload.phone,
+      amount_total: payload.amountTotal,
+      currency: "USD",
+      status: "pending_manual_payment",
+      payment_provider: payload.paymentProvider,
+    },
+    {
+      customer_name: payload.name,
+      customer_phone: payload.phone,
+      amount_total: payload.amountTotal,
+      currency: "USD",
+      status: "pending_manual_payment",
+    },
+  ];
+
+  let lastError: { message?: string } | null = null;
+
+  for (const attempt of attempts) {
+    const { data, error } = await db
+      .from("orders")
+      .insert(attempt)
+      .select("id")
+      .single();
+
+    if (!error && data?.id) {
+      return { orderId: data.id as string, error: null };
+    }
+
+    lastError = error;
+  }
+
+  return { orderId: null, error: lastError };
+}
+
+async function insertOrderItemsWithFallbacks(
+  db: ReturnType<typeof supabaseAdmin>,
+  rows: Array<{ order_id: string; product_id: string; price_usd: number }>
+) {
+  const attempts = [
+    rows,
+    rows.map((row) => ({
+      order_id: row.order_id,
+      product_id: row.product_id,
+    })),
+  ];
+
+  let lastError: { message?: string } | null = null;
+
+  for (const attempt of attempts) {
+    const { error } = await db.from("order_items").insert(attempt);
+
+    if (!error) return { error: null };
+    lastError = error;
+  }
+
+  return { error: lastError };
 }
 
 export async function POST(req: Request) {
@@ -44,80 +172,25 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json(
-      { error: "Invalid JSON body" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const name = normalizeToken(body.name);
-  const phone = normalizeToken(body.phone);
-  const email = normalizeToken(body.email);
-  const paymentType = normalizeToken(body.payment_type) || "cod";
-  const notes = normalizeToken(body.notes);
-  const rawItems = Array.isArray(body.items)
-    ? body.items.map(normalizeToken).filter(Boolean)
-    : [];
+  const name = text(body.name);
+  const phone = text(body.phone);
+  const email = text(body.email);
+  const paymentType = text(body.payment_type) || "cod";
+  const notes = text(body.notes);
+  const rawItems = Array.isArray(body.items) ? body.items.map(text).filter(Boolean) : [];
 
   if (!name || !phone || !rawItems.length) {
-    return NextResponse.json(
-      { error: "Invalid data" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid data" }, { status: 400 });
   }
-
-  const uniqueItems = [...new Set(rawItems)];
-
-let byCode: ProductRow[] = [];
-let byId: ProductRow[] = [];
-
-// search by product_code
-{
-  const { data, error } = await db
-    .from("products")
-    .select("id, product_code, price, status")
-    .in("product_code", uniqueItems);
-
-  if (error) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
-  }
-
-  byCode = (data ?? []) as ProductRow[];
-}
-
-// search by id
-{
-  const { data, error } = await db
-    .from("products")
-    .select("id, product_code, price, status")
-    .in("id", uniqueItems);
-
-  if (error) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
-  }
-
-  byId = (data ?? []) as ProductRow[];
-}
-  const merged = new Map<string, ProductRow>();
-
-  for (const p of byCode) merged.set(String(p.id), p);
-  for (const p of byId) merged.set(String(p.id), p);
-
-  const products = [...merged.values()];
 
   const resolvedProducts: ProductRow[] = [];
   const missing: string[] = [];
 
   for (const token of rawItems) {
-    const found =
-      products.find((p) => normalizeToken(p.product_code) === token) ||
-      products.find((p) => normalizeToken(p.id) === token);
+    const found = await findProductByToken(db, token);
 
     if (!found) {
       missing.push(token);
@@ -128,18 +201,17 @@ let byId: ProductRow[] = [];
 
   if (missing.length) {
     return NextResponse.json(
-      { error: `Missing items: ${[...new Set(missing)].join(", ")}` },
+      { error: `Missing items: ${unique(missing).join(", ")}` },
       { status: 400 }
     );
   }
 
-  const notAvailable = [
-    ...new Set(
-      resolvedProducts
-        .filter((p) => p.status !== "available")
-        .map((p) => String(p.product_code || p.id))
-    ),
-  ];
+  const notAvailable = unique(
+    resolvedProducts
+      .filter((p) => text(p.status).toLowerCase() !== "available")
+      .map((p) => text(p.product_code) || text(p.id))
+      .filter(Boolean)
+  );
 
   if (notAvailable.length) {
     return NextResponse.json(
@@ -149,14 +221,11 @@ let byId: ProductRow[] = [];
   }
 
   const amountTotal = resolvedProducts.reduce((sum, p) => {
-    return sum + toNumber(p.price);
+    return sum + toNumber(p.priceNumber ?? p.price ?? 0);
   }, 0);
 
   if (!Number.isFinite(amountTotal) || amountTotal <= 0) {
-    return NextResponse.json(
-      { error: "Invalid total amount" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Invalid total amount" }, { status: 500 });
   }
 
   const paymentProvider =
@@ -164,47 +233,37 @@ let byId: ProductRow[] = [];
       ? "manual_iraq_transfer"
       : "cash_on_delivery";
 
-  const { data: order, error: orderError } = await db
-    .from("orders")
-    .insert({
-      customer_name: name,
-      customer_email: email || null,
-      customer_phone: phone,
-      shipping_address: notes ? { notes } : null,
-      amount_total: amountTotal,
-      currency: "USD",
-      status: "pending_manual_payment",
-      payment_provider: paymentProvider,
-      payment_reference: null,
-      paid_at: null,
-    })
-    .select("id")
-    .single();
+  const created = await createOrderWithFallbacks(db, {
+    name,
+    email,
+    phone,
+    notes,
+    amountTotal,
+    paymentProvider,
+  });
 
-  if (orderError) {
+  if (!created.orderId) {
     return NextResponse.json(
-      { error: orderError.message },
+      { error: created.error?.message || "Failed to create order" },
       { status: 500 }
     );
   }
 
-  const orderId = order.id;
+  const orderId = created.orderId;
 
-  const rows = resolvedProducts.map((p) => ({
+  const itemRows = resolvedProducts.map((p) => ({
     order_id: orderId,
-    product_id: String(p.id),
-    price_usd: toNumber(p.price),
+    product_id: text(p.product_code) || text(p.code) || text(p.id),
+    price_usd: toNumber(p.priceNumber ?? p.price ?? 0),
   }));
 
-  const { error: itemsError } = await db
-    .from("order_items")
-    .insert(rows);
+  const itemsResult = await insertOrderItemsWithFallbacks(db, itemRows);
 
-  if (itemsError) {
+  if (itemsResult.error) {
     await db.from("orders").delete().eq("id", orderId);
 
     return NextResponse.json(
-      { error: itemsError.message },
+      { error: itemsResult.error.message || "Failed to create order items" },
       { status: 500 }
     );
   }

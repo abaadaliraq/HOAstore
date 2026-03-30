@@ -285,6 +285,16 @@
       font-size:13px;
       color:rgba(255,255,255,.75);
       min-height:20px;
+      white-space:pre-line;
+    }
+
+    .badItem{
+      border-color: rgba(255, 110, 110, .28);
+      background: rgba(255, 80, 80, .06);
+    }
+
+    .badItem .orderItem__meta{
+      color:#ffb1b1;
     }
 
     @media (max-width: 960px){
@@ -404,14 +414,7 @@
   </div>
 
   <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-
     const CART_KEY = "hoa_cart_v1";
-
-    const SUPABASE_URL = "https://ynfzwssbhkcwlgzistzj.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_ML_2mRd6ntOYpj5azn5C7w_41PvlQ6L";
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const els = {
       items: document.getElementById("items"),
@@ -431,8 +434,9 @@
       return x == null ? "" : String(x);
     }
 
-    function isUuid(value) {
-      return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || "").trim());
+    function toNumber(v) {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
     }
 
     function getCartRaw() {
@@ -445,96 +449,99 @@
     }
 
     function normalizeCart(cart) {
-      const lines = [];
+      return cart
+        .map((item) => {
+          const token = safeText(
+            item?.product_code ||
+            item?.id ||
+            item?.productId ||
+            item?.code ||
+            item?._code ||
+            item?._key
+          ).trim();
 
-      for (const item of cart) {
-        const token = safeText(
-          item?.id ||
-          item?.product_code ||
-          item?.code ||
-          item?._code ||
-          item?._key
-        ).trim();
+          const qty = Math.max(1, Number(item?.qty || 1));
+          const snapshot = item?.snapshot && typeof item.snapshot === "object" ? item.snapshot : null;
 
-        const qty = Math.max(1, Number(item?.qty || 1));
+          if (!token) return null;
+          if (!snapshot) return null;
 
-        if (!token) continue;
-
-        lines.push({
-          token,
-          qty,
-        });
-      }
-
-      return lines;
+          return {
+            token,
+            qty,
+            productId: safeText(item?.productId || snapshot?.id || "").trim(),
+            productCode: safeText(item?.product_code || snapshot?.product_code || "").trim(),
+            snapshot: {
+              id: safeText(snapshot?.id).trim(),
+              product_code: safeText(snapshot?.product_code).trim(),
+              code: safeText(snapshot?.code).trim(),
+              name: safeText(snapshot?.name).trim(),
+              name_ar: safeText(snapshot?.name_ar).trim(),
+              name_en: safeText(snapshot?.name_en).trim(),
+              name_ku: safeText(snapshot?.name_ku).trim(),
+              image: safeText(snapshot?.image).trim(),
+              image_url: safeText(snapshot?.image_url).trim(),
+              img: safeText(snapshot?.img).trim(),
+              thumbnail: safeText(snapshot?.thumbnail).trim(),
+              images: Array.isArray(snapshot?.images) ? snapshot.images : [],
+              price: toNumber(snapshot?.price),
+              priceNumber: toNumber(snapshot?.priceNumber ?? snapshot?.price),
+            },
+          };
+        })
+        .filter(Boolean);
     }
 
-    async function fetchProductsByTokens(tokens) {
-  const uniqueTokens = [...new Set(tokens.map(t => safeText(t).trim()).filter(Boolean))];
-  if (!uniqueTokens.length) return [];
-
-  let byCode = [];
-  let byId = [];
-
-  // search by product_code
-  {
-    const { data, error } = await supabase
-      .from("products")
-      .select("id, product_code, price, priceNumber, image, images, name, name_ar, name_en, name_ku, status")
-      .in("product_code", uniqueTokens);
-
-    if (error) {
-      console.error("Query by product_code failed:", error);
-    } else {
-      byCode = data || [];
-    }
-  }
-
-  // search by id
-  {
-    const { data, error } = await supabase
-      .from("products")
-      .select("id, product_code, price, priceNumber, image, images, name, name_ar, name_en, name_ku, status")
-      .in("id", uniqueTokens);
-
-    if (error) {
-      console.error("Query by id failed:", error);
-    } else {
-      byId = data || [];
-    }
-  }
-
-  const merged = new Map();
-
-  for (const p of [...byCode, ...byId]) {
-    merged.set(String(p.id), p);
-  }
-
-  return [...merged.values()];
-}
-    function productName(p) {
-      return safeText(p?.name_ar || p?.name_en || p?.name_ku || p?.name || "منتج");
-    }
-
-    function productImage(p) {
+    function productName(snapshot) {
       return safeText(
-        p?.image ||
-        (Array.isArray(p?.images) ? p.images[0] : "") ||
+        snapshot?.name_ar ||
+        snapshot?.name_en ||
+        snapshot?.name_ku ||
+        snapshot?.name ||
+        "منتج"
+      );
+    }
+
+    function productImage(snapshot) {
+      return safeText(
+        snapshot?.image ||
+        snapshot?.image_url ||
+        snapshot?.img ||
+        snapshot?.thumbnail ||
+        (Array.isArray(snapshot?.images) ? snapshot.images[0] : "") ||
         "https://placehold.co/300x300?text=HOA"
       );
     }
 
-    function productPrice(p) {
-      const n = Number(p?.priceNumber ?? p?.price ?? 0);
-      return Number.isFinite(n) ? n : 0;
+    function productCode(snapshot, fallbackToken = "") {
+      return safeText(
+        snapshot?.product_code ||
+        snapshot?.code ||
+        snapshot?.id ||
+        fallbackToken ||
+        "—"
+      );
     }
 
-    let state = {
+    function productPrice(snapshot) {
+      return toNumber(
+        snapshot?.priceNumber ??
+        snapshot?.price ??
+        0
+      );
+    }
+
+    const state = {
       lines: [],
-      products: [],
       renderedLines: [],
       total: 0,
+      hasBrokenItems: false,
     };
+
+    function setStatus(message = "", isError = false) {
+      els.statusLine.textContent = message;
+      els.statusLine.style.color = isError ? "#ff9f9f" : "rgba(255,255,255,.75)";
+    }
 
     function renderEmpty(message = "السلة فارغة") {
       els.items.innerHTML = `<div class="orderEmpty">${message}</div>`;
@@ -543,80 +550,125 @@
       els.itemsCount.textContent = "0 قطعة";
       state.total = 0;
       state.renderedLines = [];
+      state.hasBrokenItems = false;
     }
 
     function renderOrder() {
-      const lookup = new Map();
-
-      for (const p of state.products) {
-        lookup.set(String(p.product_code || "").trim(), p);
-        lookup.set(String(p.id || "").trim(), p);
-      }
-
-      let total = 0;
       const renderedLines = [];
+      let total = 0;
 
       for (const line of state.lines) {
-        const p = lookup.get(line.token);
+        const snapshot = line.snapshot || null;
 
-        if (!p) continue;
+        if (!snapshot) {
+          renderedLines.push({
+            token: line.token,
+            submitToken: "",
+            qty: line.qty,
+            snapshot: null,
+            unitPrice: 0,
+            lineTotal: 0,
+            validForSubmit: false,
+          });
+          continue;
+        }
 
-        const unitPrice = productPrice(p);
+        const submitToken =
+          safeText(line.productCode).trim() ||
+          safeText(snapshot?.product_code).trim() ||
+          safeText(snapshot?.code).trim() ||
+          safeText(line.productId).trim() ||
+          safeText(snapshot?.id).trim() ||
+          safeText(line.token).trim();
+
+        const unitPrice = productPrice(snapshot);
         const lineTotal = unitPrice * line.qty;
         total += lineTotal;
 
         renderedLines.push({
           token: line.token,
+          submitToken,
           qty: line.qty,
-          product: p,
+          snapshot,
           unitPrice,
           lineTotal,
+          validForSubmit: !!submitToken,
         });
       }
 
       state.renderedLines = renderedLines;
       state.total = total;
+      state.hasBrokenItems = renderedLines.some((line) => !line.validForSubmit || !line.snapshot);
 
       if (!renderedLines.length) {
-        renderEmpty("لم يتم العثور على بيانات القطع داخل قاعدة البيانات.");
+        renderEmpty("السلة فارغة حالياً.");
         return;
       }
 
-      els.items.innerHTML = renderedLines.map(({ product, qty, unitPrice, lineTotal }) => `
-        <div class="orderItem">
-          <div class="orderItem__media">
-            <img src="${productImage(product)}" alt="${productName(product)}" loading="lazy" />
-          </div>
+      els.items.innerHTML = renderedLines.map((line) => {
+        if (!line.snapshot) {
+          return `
+            <div class="orderItem badItem">
+              <div class="orderItem__media">
+                <img src="https://placehold.co/300x300?text=HOA" alt="Missing item" loading="lazy" />
+              </div>
 
-          <div>
-            <div class="orderItem__title">${productName(product)}</div>
-            <div class="orderItem__meta">
-              <div>${safeText(product.product_code || product.id || "—")}</div>
-              <div>الكمية: ${qty}</div>
-              <div>سعر القطعة: $${unitPrice.toLocaleString("en-US")}</div>
+              <div>
+                <div class="orderItem__title">قطعة غير قابلة للقراءة</div>
+                <div class="orderItem__meta">
+                  <div>المعرف المخزن: ${safeText(line.token)}</div>
+                  <div>الكمية: ${line.qty}</div>
+                  <div>هذه القطعة مخزنة داخل السلة بصيغة ناقصة.</div>
+                </div>
+              </div>
+
+              <div class="orderItem__price">$0</div>
             </div>
-          </div>
+          `;
+        }
 
-          <div class="orderItem__price">$${lineTotal.toLocaleString("en-US")}</div>
-        </div>
-      `).join("");
+        const s = line.snapshot;
+        const title = productName(s);
+        const code = productCode(s, line.token);
+        const img = productImage(s);
+        const price = line.unitPrice;
+
+        return `
+          <div class="orderItem">
+            <div class="orderItem__media">
+              <img src="${img}" alt="${title}" loading="lazy" />
+            </div>
+
+            <div>
+              <div class="orderItem__title">${title}</div>
+              <div class="orderItem__meta">
+                <div>${code}</div>
+                <div>الكمية: ${line.qty}</div>
+                <div>سعر القطعة: $${price.toLocaleString("en-US")}</div>
+              </div>
+            </div>
+
+            <div class="orderItem__price">$${line.lineTotal.toLocaleString("en-US")}</div>
+          </div>
+        `;
+      }).join("");
 
       const count = renderedLines.reduce((sum, x) => sum + x.qty, 0);
 
       els.total.textContent = `$${total.toLocaleString("en-US")}`;
       els.summaryCount.textContent = String(count);
       els.itemsCount.textContent = `${count} قطعة`;
+
+      if (state.hasBrokenItems) {
+        setStatus("بعض العناصر داخل السلة ناقصة البيانات. فرّغي السلة وأعيدي الإضافة.", true);
+      } else {
+        setStatus("");
+      }
     }
 
-    function setStatus(message = "", isError = false) {
-      els.statusLine.textContent = message;
-      els.statusLine.style.color = isError ? "#ff9f9f" : "rgba(255,255,255,.75)";
-    }
-
-    async function initPage() {
+    function initPage() {
       const cartRaw = getCartRaw();
       const lines = normalizeCart(cartRaw);
-
       state.lines = lines;
 
       if (!lines.length) {
@@ -624,16 +676,7 @@
         return;
       }
 
-      try {
-        setStatus("جاري تحميل بيانات القطع...");
-        state.products = await fetchProductsByTokens(lines.map(x => x.token));
-        renderOrder();
-        setStatus("");
-      } catch (err) {
-        console.error(err);
-        renderEmpty("تعذر تحميل بيانات القطع.");
-        setStatus("فشل تحميل بيانات الطلب.", true);
-      }
+      renderOrder();
     }
 
     async function submitOrder() {
@@ -649,7 +692,14 @@
       }
 
       if (!state.renderedLines.length) {
-        alert("لا توجد قطع صالحة داخل الطلب");
+        alert("لا توجد قطع داخل الطلب");
+        return;
+      }
+
+      const validLines = state.renderedLines.filter((line) => line.validForSubmit);
+
+      if (!validLines.length) {
+        alert("لا توجد قطع صالحة للإرسال.");
         return;
       }
 
@@ -659,11 +709,16 @@
         email,
         payment_type: paymentType,
         notes,
-        items: state.renderedLines.flatMap((line) =>
-          Array.from({ length: line.qty }, () =>
-            safeText(line.product.product_code || line.product.id).trim()
-          )
-        ),
+        items: validLines.flatMap((line) => {
+          const token =
+            safeText(line.submitToken).trim() ||
+            safeText(line.snapshot?.product_code).trim() ||
+            safeText(line.snapshot?.code).trim() ||
+            safeText(line.snapshot?.id).trim() ||
+            safeText(line.token).trim();
+
+          return Array.from({ length: line.qty }, () => token);
+        }),
       };
 
       try {
@@ -704,7 +759,6 @@
     }
 
     els.submitBtn.addEventListener("click", submitOrder);
-
     initPage();
   </script>
 </body>

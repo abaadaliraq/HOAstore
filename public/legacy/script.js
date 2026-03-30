@@ -2049,6 +2049,93 @@ function getProductPriceNumber(product) {
 }
 
 /* =========================
+   Init
+========================= */
+function init() {
+  try {
+    bindEls();
+    loadAR();
+    loadFavs();
+    hydrate();
+
+    initPhoneInput();
+    initHeroSlider();
+
+    if (state.cat !== "all" && !CATEGORY_KEYS.includes(state.cat)) {
+      state.cat = "all";
+    }
+
+    initCart();
+    bindEvents();
+    renderAll();
+    tryOpenFromHash();
+
+    if (window.emailjs && EMAILJS_PUBLIC_KEY) {
+      try {
+        if (typeof window.emailjs.init === "function") {
+          try {
+            window.emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+          } catch {
+            window.emailjs.init(EMAILJS_PUBLIC_KEY);
+          }
+        }
+      } catch (e) {
+        console.warn("EmailJS init failed:", e);
+      }
+    }
+  } catch (err) {
+    console.error("HOA script error:", err);
+
+    try {
+      if (els.emptyState) {
+        els.emptyState.style.display = "block";
+        els.emptyState.textContent = "JS Error — افتحي Console";
+      }
+    } catch {}
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
+} else {
+  init();
+}
+
+/* Fix product images sizing without needing refresh */
+window.addEventListener("load", () => {
+  document
+    .querySelectorAll(".product-card img, .card img, .product img")
+    .forEach((img) => {
+      if (img.complete) return;
+
+      img.addEventListener("load", () => {
+        img.style.transform = "translateZ(0)";
+        requestAnimationFrame(() => {
+          img.style.transform = "";
+        });
+      });
+    });
+});
+
+function findProductById(id) {
+  const target = String(id || "").trim();
+
+  return ALL.find((p) => {
+    return (
+      String(p.product_code || "").trim() === target ||
+      String(p.code || "").trim() === target ||
+      String(p.id || "").trim() === target ||
+      String(p._code || "").trim() === target ||
+      String(p._key || "").trim() === target
+    );
+  }) || null;
+}
+
+function getProductPriceNumber(product) {
+  return getRawPrice(product);
+}
+
+/* =========================
    CART
 ========================= */
 
@@ -2058,7 +2145,54 @@ function getCart() {
   try {
     const raw = localStorage.getItem(CART_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
+    const cart = Array.isArray(parsed) ? parsed : [];
+
+    const normalized = cart
+      .map((item) => {
+        const id = String(
+          item?.product_code ||
+          item?.id ||
+          item?.productId ||
+          ""
+        ).trim();
+
+        const qty = Math.max(1, Number(item?.qty || 1));
+        if (!id) return null;
+
+        const snapshot =
+          item?.snapshot && typeof item.snapshot === "object"
+            ? item.snapshot
+            : null;
+
+        return {
+          id,
+          productId: String(item?.productId || snapshot?.id || "").trim(),
+          product_code: String(item?.product_code || snapshot?.product_code || "").trim(),
+          qty,
+          snapshot: snapshot
+            ? {
+                id: String(snapshot?.id || "").trim(),
+                product_code: String(snapshot?.product_code || "").trim(),
+                code: String(snapshot?.code || "").trim(),
+                name: String(snapshot?.name || "").trim(),
+                name_ar: String(snapshot?.name_ar || "").trim(),
+                name_en: String(snapshot?.name_en || "").trim(),
+                name_ku: String(snapshot?.name_ku || "").trim(),
+                image: String(snapshot?.image || "").trim(),
+                image_url: String(snapshot?.image_url || "").trim(),
+                img: String(snapshot?.img || "").trim(),
+                thumbnail: String(snapshot?.thumbnail || "").trim(),
+                images: Array.isArray(snapshot?.images) ? snapshot.images : [],
+                price: Number(snapshot?.price || 0),
+                priceNumber: Number(snapshot?.priceNumber || snapshot?.price || 0),
+              }
+            : null,
+        };
+      })
+      .filter(Boolean);
+
+    localStorage.setItem(CART_KEY, JSON.stringify(normalized));
+    return normalized;
   } catch {
     return [];
   }
@@ -2073,13 +2207,27 @@ function addToCart(productId) {
   if (!product) return;
 
   const cart = getCart();
+
   const stableKey = String(
-    product.product_code || product.code || product.id || product._code || product._key || ""
+    product.product_code || product.id || product.code || product._code || product._key || ""
   ).trim();
 
   if (!stableKey) return;
 
-  const exists = cart.some((item) => String(item.id || "").trim() === stableKey);
+  const productIdValue = String(product.id || "").trim();
+  const productCodeValue = String(product.product_code || "").trim();
+
+  const exists = cart.some((item) => {
+    const currentId = String(item.id || "").trim();
+    const currentProductId = String(item.productId || "").trim();
+    const currentProductCode = String(item.product_code || "").trim();
+
+    return (
+      currentId === stableKey ||
+      (productIdValue && currentProductId === productIdValue) ||
+      (productCodeValue && currentProductCode === productCodeValue)
+    );
+  });
 
   if (exists) {
     if (typeof toast === "function") {
@@ -2088,9 +2236,38 @@ function addToCart(productId) {
     return;
   }
 
+  const productPrice = Number(getProductPriceNumber(product) || 0);
+
   cart.push({
-    id: stableKey,
+    id: productCodeValue || stableKey,
+    productId: productIdValue,
+    product_code: productCodeValue,
     qty: 1,
+    snapshot: {
+      id: String(product.id || "").trim(),
+      product_code: String(product.product_code || "").trim(),
+      code: String(product.code || product._code || "").trim(),
+      name:
+        typeof pickText === "function" && typeof getLang === "function"
+          ? pickText(product, "name", getLang)
+          : "",
+      name_ar: safeText(product.name_ar),
+      name_en: safeText(product.name_en),
+      name_ku: safeText(product.name_ku),
+      image:
+        product.image ||
+        product.image_url ||
+        product.img ||
+        product.thumbnail ||
+        (Array.isArray(product.images) ? product.images[0] : "") ||
+        "",
+      image_url: safeText(product.image_url),
+      img: safeText(product.img),
+      thumbnail: safeText(product.thumbnail),
+      images: Array.isArray(product.images) ? product.images : [],
+      price: productPrice,
+      priceNumber: productPrice,
+    },
   });
 
   saveCart(cart);
@@ -2100,7 +2277,15 @@ function addToCart(productId) {
 
 function removeFromCart(productId) {
   const key = String(productId || "").trim();
-  const cart = getCart().filter((item) => String(item.id || "").trim() !== key);
+
+  const cart = getCart().filter((item) => {
+    const itemId = String(item.id || "").trim();
+    const itemProductCode = String(item.product_code || "").trim();
+    const itemProductId = String(item.productId || "").trim();
+
+    return itemId !== key && itemProductCode !== key && itemProductId !== key;
+  });
+
   saveCart(cart);
   renderCart();
 }
@@ -2115,13 +2300,28 @@ function getCartDetailedItems() {
 
   return cart
     .map((item) => {
-      const product = findProductById(item.id);
-      if (!product) return null;
+      const snapshot = item.snapshot || null;
+
+      const product =
+        findProductById(item.product_code) ||
+        findProductById(item.productId) ||
+        findProductById(item.id);
+
+      // بالسلة نعتمد على snapshot أولاً حتى لا يظهر منتج خاطئ
+      const finalProduct = snapshot || product || null;
+      if (!finalProduct) return null;
+
+      const priceNum = Number(
+        snapshot?.priceNumber ||
+        snapshot?.price ||
+        getProductPriceNumber(product || finalProduct) ||
+        0
+      );
 
       return {
         ...item,
-        product,
-        lineTotal: getProductPriceNumber(product) * (item.qty || 1),
+        product: finalProduct,
+        lineTotal: priceNum * (item.qty || 1),
       };
     })
     .filter(Boolean);
@@ -2134,12 +2334,15 @@ function renderCart() {
 
   if (!cartCountEl || !cartItemsEl || !cartTotalEl) return;
 
+  const rawCart = getCart();
   const items = getCartDetailedItems();
   const removeLabel = typeof t === "function" ? t("cart_remove") : "Remove";
 
-  cartCountEl.textContent = String(items.length);
+  cartCountEl.textContent = String(
+    rawCart.reduce((sum, item) => sum + (item.qty || 1), 0)
+  );
 
-  if (!items.length) {
+  if (!rawCart.length) {
     const emptyText = typeof t === "function" ? t("cart_empty") : "السلة فارغة";
     cartItemsEl.innerHTML = `<div class="cartDrawer__empty">${emptyText}</div>`;
     cartTotalEl.textContent = "$0";
@@ -2156,8 +2359,14 @@ function renderCart() {
   cartItemsEl.innerHTML = items
     .map((item) => {
       const p = item.product || {};
+      const snap = item.snapshot || {};
 
       const img =
+        snap.image ||
+        snap.image_url ||
+        snap.img ||
+        snap.thumbnail ||
+        (Array.isArray(snap.images) ? snap.images[0] : "") ||
         p.image ||
         p.image_url ||
         p.img ||
@@ -2166,21 +2375,48 @@ function renderCart() {
         "https://placehold.co/200x200?text=HOA";
 
       const title =
-        (typeof pickText === "function" && typeof getLang === "function"
+        snap.name_ar ||
+        snap.name_en ||
+        snap.name_ku ||
+        snap.name ||
+        ((typeof pickText === "function" && typeof getLang === "function")
           ? pickText(p, "name", getLang)
           : null) ||
+        p.name ||
         p.title ||
         "Product";
 
-      const code = p.product_code || p.code || p.id || "—";
+      const code =
+        snap.product_code ||
+        snap.code ||
+        snap.id ||
+        p.product_code ||
+        p.code ||
+        p.id ||
+        "—";
 
-      const priceNum = Number(getProductPriceNumber(p) || 0);
+      const priceNum = Number(
+        snap.priceNumber ||
+        snap.price ||
+        getProductPriceNumber(p) ||
+        0
+      );
+
       const price =
         Number.isFinite(priceNum) && priceNum > 0
           ? `$${priceNum.toLocaleString("en-US")}`
           : "";
 
-      const removeKey = p.product_code || p.code || p.id || "";
+      const removeKey =
+        item.product_code ||
+        item.productId ||
+        item.id ||
+        snap.product_code ||
+        snap.id ||
+        p.product_code ||
+        p.id ||
+        p.code ||
+        "";
 
       return `
         <div class="cartItem">
